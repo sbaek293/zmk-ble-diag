@@ -48,6 +48,7 @@ static void display_status(void)
 static void setup_display(void)
 {
 	int err;
+	int retries_left;
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
@@ -56,26 +57,34 @@ static void setup_display(void)
 		return;
 	}
 
-	for (int attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
+	retries_left = DISPLAY_INIT_RETRY_COUNT;
+	do {
 		err = cfb_framebuffer_init(display_dev);
 		if (!err) {
 			break;
 		}
-		k_sleep(K_MSEC(DISPLAY_INIT_RETRY_DELAY_MS));
-	}
+		retries_left--;
+		if (retries_left > 0) {
+			k_sleep(K_MSEC(DISPLAY_INIT_RETRY_DELAY_MS));
+		}
+	} while (retries_left > 0);
 	if (err) {
 		display_dev = NULL;
 		LOG_WRN("CFB init failed after %d retries (%d)", DISPLAY_INIT_RETRY_COUNT, err);
 		return;
 	}
 
-	for (int attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
+	retries_left = DISPLAY_INIT_RETRY_COUNT;
+	do {
 		err = display_blanking_off(display_dev);
 		if (!err) {
 			break;
 		}
-		k_sleep(K_MSEC(DISPLAY_INIT_RETRY_DELAY_MS));
-	}
+		retries_left--;
+		if (retries_left > 0) {
+			k_sleep(K_MSEC(DISPLAY_INIT_RETRY_DELAY_MS));
+		}
+	} while (retries_left > 0);
 	if (err) {
 		display_dev = NULL;
 		LOG_WRN("Display blanking off failed after %d retries (%d)", DISPLAY_INIT_RETRY_COUNT,
