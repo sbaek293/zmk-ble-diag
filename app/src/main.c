@@ -57,6 +57,12 @@ static void setup_display(void)
 		return;
 	}
 
+	if (display_blanking_off(display_dev)) {
+		display_dev = NULL;
+		LOG_WRN("Display blanking off failed");
+		return;
+	}
+
 	cfb_framebuffer_clear(display_dev, true);
 	cfb_framebuffer_finalize(display_dev);
 }
