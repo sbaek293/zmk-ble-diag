@@ -33,3 +33,10 @@ nice!nano v2 / XIAO nRF52840용 BLE 진단 펌웨어 스켈레톤입니다.
 west build -b nice_nano_v2 . -DDTC_OVERLAY_FILE=boards/shields/nice_nano_v2_ble_diag.overlay
 west build -b xiao_ble . -DDTC_OVERLAY_FILE=boards/shields/xiao_nrf52840_ble_diag.overlay
 ```
+
+## GitHub Actions 빌드
+- 워크플로우: `.github/workflows/build-firmware.yml`
+- 빌드 대상:
+  - `firmware-xiao-uf2` 아티팩트 (`firmware-xiao-uf2.uf2`)
+  - `firmware-nice-nano-v2-uf2` 아티팩트 (`firmware-nice-nano-v2-uf2.uf2`)
+- 실행 후 Actions 아티팩트에서 각 보드의 `.uf2` 파일을 개별 다운로드할 수 있습니다.

@@ -1,0 +1,98 @@
+---
+name: Build BLE diag firmware
+
+'on':
+  push:
+    branches:
+      - main
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.artifact_name }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    container:
+      image: ghcr.io/zephyrproject-rtos/ci:v0.26.5
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - board: xiao_ble
+            overlay: boards/shields/xiao_nrf52840_ble_diag.overlay
+            build_dir: xiao_ble
+            artifact_name: firmware-xiao-uf2
+          - board: nice_nano_v2
+            overlay: boards/shields/nice_nano_v2_ble_diag.overlay
+            build_dir: nice_nano_v2
+            artifact_name: firmware-nice-nano-v2-uf2
+
+    steps:
+      - name: Checkout firmware source
+        uses: actions/checkout@v4
+
+      - name: Checkout ZMK
+        uses: actions/checkout@v4
+        with:
+          repository: zmkfirmware/zmk
+          path: zmk
+
+      - name: Initialize west workspace
+        working-directory: zmk
+        run: |
+          west init -l app
+          west update
+          west zephyr-export
+
+      - name: Build firmware (${{ matrix.board }})
+        working-directory: zmk
+        run: |
+          west build \
+            -p always \
+            -d "build/${{ matrix.build_dir }}" \
+            -s "${{ github.workspace }}" \
+            -b "${{ matrix.board }}" \
+            -- \
+            -DDTC_OVERLAY_FILE="${{ github.workspace }}/${{ matrix.overlay }}"
+
+      - name: Collect UF2 artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          BOARD_NAME="${{ matrix.board }}"
+          UF2_FILES_RAW="$(
+            find "zmk/build/${{ matrix.build_dir }}/zephyr" \
+              -maxdepth 1 \
+              -type f \
+              -name '*.uf2' \
+              | sort
+          )"
+
+          if [[ -z "${UF2_FILES_RAW}" ]]; then
+            printf 'UF2 output not found for board: %s\n' "${BOARD_NAME}"
+            BUILD_DIR_NAME="${{ matrix.build_dir }}"
+            printf 'Expected path: zmk/build/%s/zephyr/*.uf2\n' \
+              "${BUILD_DIR_NAME}"
+            printf 'Check build logs for generation errors.\n'
+            exit 1
+          fi
+
+          UF2_COUNT="$(printf '%s\n' "${UF2_FILES_RAW}" | wc -l)"
+          if [[ "${UF2_COUNT}" -gt 1 ]]; then
+            printf 'Expected exactly one UF2, found multiple.\n'
+            printf 'Board: %s\n' "${BOARD_NAME}"
+            printf 'Review build configuration and output files.\n'
+            printf '%s\n' "${UF2_FILES_RAW}"
+            exit 1
+          fi
+
+          UF2_FILE="$(printf '%s\n' "${UF2_FILES_RAW}" | head -n 1)"
+          cp "${UF2_FILE}" "${{ matrix.artifact_name }}.uf2"
+
+      - name: Upload UF2 artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact_name }}
+          path: ${{ matrix.artifact_name }}.uf2
