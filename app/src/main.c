@@ -28,10 +28,11 @@ static void display_status(void)
 	char line0[DISPLAY_LINE_BUFFER_SIZE];
 	char line1[DISPLAY_LINE_BUFFER_SIZE];
 	char line2[DISPLAY_LINE_BUFFER_SIZE];
+	int display_idx = current_channel_idx + 1;
 
 	snprintk(line0, sizeof(line0), "BLE DIAG RUN");
 	snprintk(line1, sizeof(line1), "CH:%u IDX:%d", diag_channels[current_channel_idx],
-		 current_channel_idx + 1);
+		 display_idx);
 	snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
 
 	cfb_framebuffer_clear(display_dev, true);
@@ -103,7 +104,6 @@ static int stop_test_and_read_count(uint32_t *count)
 int main(void)
 {
 	int err;
-	uint32_t uptime_sec;
 
 	LOG_INF("Starting BLE diagnostics");
 	setup_display();
@@ -119,7 +119,7 @@ int main(void)
 
 		err = run_rx_test(channel);
 		if (err) {
-			LOG_ERR("LE RX test start failed, exiting diagnostic loop (ch=%u, err=%d)",
+			LOG_ERR("LE RX test start failed, terminating diagnostics (ch=%u, err=%d)",
 				channel, err);
 			return err;
 		}
@@ -128,12 +128,12 @@ int main(void)
 
 		err = stop_test_and_read_count(&packet_count[current_channel_idx]);
 		if (err) {
-			LOG_ERR("LE test end failed, exiting diagnostic loop (ch=%u, err=%d)",
+			LOG_ERR("LE test end failed, terminating diagnostics (ch=%u, err=%d)",
 				channel, err);
 			return err;
 		}
 
-		uptime_sec = k_uptime_get_32() / 1000U;
+		uint32_t uptime_sec = k_uptime_get_32() / 1000U;
 		LOG_INF("t=%us CH=%u idx=%d pkt=%u", uptime_sec, channel,
 			current_channel_idx + 1, packet_count[current_channel_idx]);
 		display_status();
