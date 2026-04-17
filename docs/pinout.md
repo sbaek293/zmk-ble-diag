@@ -7,7 +7,7 @@
 - SSD1306 SCL -> 보드 SCL
 
 ## 보드별 권장 핀
-- nice!nano v2: Pro Micro 핀열의 `P1(SDA)`, `P0(SCL)` 사용
-- XIAO nRF52840: `D4(SDA)`, `D5(SCL)` 사용
+- nice!nano v2: `P0.17(SDA)`, `P0.20(SCL)` 사용
+- XIAO nRF52840: `P0.17(SDA)`, `P0.20(SCL)` 사용
 
-> 두 보드 모두 `boards/shields/*.overlay`에서 I2C0 + SSD1306(0x3C)로 설정됩니다.
+> 두 보드 모두 `boards/shields/*.overlay`에서 pinctrl로 핀이 명시 지정되며, nice!nano는 i2c0, XIAO는 i2c1 버스를 사용합니다.
