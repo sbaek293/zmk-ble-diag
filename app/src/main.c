@@ -119,7 +119,8 @@ int main(void)
 
 		err = run_rx_test(channel);
 		if (err) {
-			LOG_ERR("LE RX test start failed (ch=%u, err=%d)", channel, err);
+			LOG_ERR("LE RX test start failed, exiting diagnostic loop (ch=%u, err=%d)",
+				channel, err);
 			return err;
 		}
 
@@ -127,7 +128,8 @@ int main(void)
 
 		err = stop_test_and_read_count(&packet_count[current_channel_idx]);
 		if (err) {
-			LOG_ERR("LE test end failed (ch=%u, err=%d)", channel, err);
+			LOG_ERR("LE test end failed, exiting diagnostic loop (ch=%u, err=%d)",
+				channel, err);
 			return err;
 		}
 
