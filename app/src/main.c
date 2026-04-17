@@ -14,6 +14,7 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 #define DISPLAY_LINE_BUFFER_SIZE 21
 #define DISPLAY_INIT_RETRY_COUNT 20
 #define DISPLAY_INIT_RETRY_DELAY_MS 50
+#define DISPLAY_BOOT_SPLASH_MS 300
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
@@ -86,10 +87,18 @@ static void setup_display(void)
 	}
 
 	cfb_framebuffer_clear(display_dev, true);
-	cfb_print(display_dev, "BLE DIAG BOOT", 0, 0);
-	cfb_print(display_dev, "DISPLAY OK", 0, 1);
+	err = cfb_print(display_dev, "BLE DIAG BOOT", 0, 0);
+	if (err < 0) {
+		LOG_WRN("Failed to print boot line 0 (%d)", err);
+	}
+
+	err = cfb_print(display_dev, "DISPLAY OK", 0, 1);
+	if (err < 0) {
+		LOG_WRN("Failed to print boot line 1 (%d)", err);
+	}
+
 	cfb_framebuffer_finalize(display_dev);
-	k_sleep(K_MSEC(300));
+	k_sleep(K_MSEC(DISPLAY_BOOT_SPLASH_MS));
 	display_status();
 }
 
