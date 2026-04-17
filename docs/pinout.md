@@ -8,6 +8,6 @@
 
 ## 보드별 권장 핀
 - nice!nano v2: `P0.17(SDA)`, `P0.20(SCL)` 사용
-- XIAO nRF52840: `P0.17(SDA)`, `P0.20(SCL)` 사용
+- XIAO nRF52840: `P0.04(SDA)`, `P0.05(SCL)` 사용
 
-> 두 보드 모두 `boards/shields/*.overlay`에서 pinctrl로 핀이 명시 지정되며, nice!nano는 i2c0, XIAO는 i2c1 버스를 사용합니다.
+> `boards/shields/*.overlay`에서 pinctrl로 핀이 명시 지정되며, nice!nano는 i2c0, XIAO는 i2c1 버스를 사용합니다.
