@@ -7,7 +7,7 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 
-LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(zmk_ble_diag, LOG_LEVEL_INF);
 
 #define CHANNEL_COUNT 5
 #define CHANNEL_DWELL_MS 5000
@@ -28,11 +28,11 @@ static void display_status(void)
 	char line0[DISPLAY_LINE_BUFFER_SIZE];
 	char line1[DISPLAY_LINE_BUFFER_SIZE];
 	char line2[DISPLAY_LINE_BUFFER_SIZE];
-	int display_idx = current_channel_idx + 1;
+	int one_based_channel_idx = current_channel_idx + 1;
 
 	snprintk(line0, sizeof(line0), "BLE DIAG RUN");
 	snprintk(line1, sizeof(line1), "CH:%u IDX:%d", diag_channels[current_channel_idx],
-		 display_idx);
+		 one_based_channel_idx);
 	snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
 
 	cfb_framebuffer_clear(display_dev, true);
