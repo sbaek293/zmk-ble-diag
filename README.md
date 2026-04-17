@@ -30,7 +30,7 @@ nice!nano v2 / XIAO nRF52840용 BLE 진단 펌웨어 스켈레톤입니다.
 
 ## 빌드 예시 (Zephyr)
 ```bash
-west build -b nice_nano_v2 . -DDTC_OVERLAY_FILE=boards/shields/nice_nano_v2_ble_diag.overlay
+west build -b nice_nano/nrf52840 . -DDTC_OVERLAY_FILE=boards/shields/nice_nano_v2_ble_diag.overlay
 west build -b xiao_ble . -DDTC_OVERLAY_FILE=boards/shields/xiao_nrf52840_ble_diag.overlay
 ```
 

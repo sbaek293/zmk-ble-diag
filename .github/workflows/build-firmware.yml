@@ -20,11 +20,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - board: xiao_ble/nrf52840/zmk
+          - board: xiao_ble
             overlay: boards/shields/xiao_nrf52840_ble_diag.overlay
             build_dir: xiao_ble
             artifact_name: firmware-xiao-uf2
-          - board: nice_nano/nrf52840/zmk
+          - board: nice_nano/nrf52840
             overlay: boards/shields/nice_nano_v2_ble_diag.overlay
             build_dir: nice_nano_v2
             artifact_name: firmware-nice-nano-v2-uf2
@@ -56,7 +56,7 @@ jobs:
             -b "${{ matrix.board }}" \
             -- \
             -DDTC_OVERLAY_FILE="${GITHUB_WORKSPACE}/${{ matrix.overlay }}" \
-            -DBOARD_ROOT="${GITHUB_WORKSPACE}/zmk/app;${GITHUB_WORKSPACE}/zmk/app/module"
+            -DBOARD_ROOT="${GITHUB_WORKSPACE}/zmk/app/module"
 
       - name: Collect UF2 artifact
         shell: bash
