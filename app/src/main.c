@@ -69,6 +69,7 @@ static void setup_display(void)
 
 	cfb_framebuffer_clear(display_dev, true);
 	cfb_framebuffer_finalize(display_dev);
+	display_status();
 }
 
 static int run_rx_test(uint8_t channel)
