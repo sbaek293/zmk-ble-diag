@@ -101,6 +101,25 @@ static int stop_test_and_read_count(uint32_t *count)
 	return 0;
 }
 
+static void cleanup_diagnostics(void)
+{
+	struct net_buf *buf;
+	struct net_buf *rsp = NULL;
+
+	buf = bt_hci_cmd_create(BT_HCI_OP_LE_TEST_END, 0);
+	if (buf && !bt_hci_cmd_send_sync(BT_HCI_OP_LE_TEST_END, buf, &rsp) && rsp) {
+		net_buf_unref(rsp);
+	}
+
+	if (!display_dev) {
+		return;
+	}
+
+	cfb_framebuffer_clear(display_dev, true);
+	cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
+	cfb_framebuffer_finalize(display_dev);
+}
+
 int main(void)
 {
 	int err;
@@ -121,6 +140,7 @@ int main(void)
 		if (err) {
 			LOG_ERR("LE RX test start failed, terminating diagnostics (ch=%u, err=%d)",
 				channel, err);
+			cleanup_diagnostics();
 			return err;
 		}
 
@@ -130,6 +150,7 @@ int main(void)
 		if (err) {
 			LOG_ERR("LE test end failed, terminating diagnostics (ch=%u, err=%d)",
 				channel, err);
+			cleanup_diagnostics();
 			return err;
 		}
 
