@@ -12,6 +12,8 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 #define CHANNEL_COUNT 5
 #define CHANNEL_DWELL_MS 5000
 #define DISPLAY_LINE_BUFFER_SIZE 21
+#define DISPLAY_INIT_RETRY_COUNT 20
+#define DISPLAY_INIT_RETRY_DELAY_MS 50
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
@@ -44,7 +46,7 @@ static void display_status(void)
 
 static void setup_display(void)
 {
-	int err;
+	int err = -ENODEV;
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
@@ -53,22 +55,37 @@ static void setup_display(void)
 		return;
 	}
 
-	err = cfb_framebuffer_init(display_dev);
+	for (int attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
+		err = cfb_framebuffer_init(display_dev);
+		if (!err) {
+			break;
+		}
+		k_sleep(K_MSEC(DISPLAY_INIT_RETRY_DELAY_MS));
+	}
 	if (err) {
 		display_dev = NULL;
-		LOG_WRN("CFB init failed (%d)", err);
+		LOG_WRN("CFB init failed after retries (%d)", err);
 		return;
 	}
 
-	err = display_blanking_off(display_dev);
+	for (int attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
+		err = display_blanking_off(display_dev);
+		if (!err) {
+			break;
+		}
+		k_sleep(K_MSEC(DISPLAY_INIT_RETRY_DELAY_MS));
+	}
 	if (err) {
 		display_dev = NULL;
-		LOG_WRN("Display blanking off failed (%d)", err);
+		LOG_WRN("Display blanking off failed after retries (%d)", err);
 		return;
 	}
 
 	cfb_framebuffer_clear(display_dev, true);
+	cfb_print(display_dev, "BLE DIAG BOOT", 0, 0);
+	cfb_print(display_dev, "DISPLAY OK", 0, 1);
 	cfb_framebuffer_finalize(display_dev);
+	k_sleep(K_MSEC(300));
 	display_status();
 }
 
