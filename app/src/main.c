@@ -47,7 +47,7 @@ static void display_status(void)
 
 static void setup_display(void)
 {
-	int err = 0;
+	int err;
 	int attempt = 0;
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
