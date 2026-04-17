@@ -80,7 +80,7 @@ int main(void)
 int err;
 uint32_t uptime_sec;
 
-LOG_INF("USB power detected -> BLE diagnostics start");
+LOG_INF("Starting BLE diagnostics");
 setup_display();
 
 err = bt_enable(NULL);
