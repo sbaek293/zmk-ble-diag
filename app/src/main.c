@@ -7,15 +7,15 @@
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
 
-LOG_MODULE_REGISTER(zmk_ble_diag, LOG_LEVEL_INF);
+LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 
 #define CHANNEL_COUNT 5
 #define CHANNEL_DWELL_MS 5000
 #define DISPLAY_LINE_BUFFER_SIZE 21
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
-static uint32_t packet_count[CHANNEL_COUNT];
-static int current_channel_idx;
+static uint32_t packet_count[CHANNEL_COUNT] = {0};
+static int current_channel_idx = 0;
 
 static const struct device *display_dev;
 

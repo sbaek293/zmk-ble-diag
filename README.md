@@ -28,9 +28,6 @@ nice!nano v2 / XIAO nRF52840용 BLE 진단 펌웨어 스켈레톤입니다.
 
 ![SSD1306 상태 예시](docs/ssd1306-status-screenshot.png)
 
-외부 공유용 이미지 URL:
-- https://github.com/user-attachments/assets/b8a389e1-5abc-4fe3-bf66-49021b95de75
-
 ## 빌드 예시 (Zephyr)
 ```bash
 west build -b nice_nano_v2 . -DDTC_OVERLAY_FILE=boards/shields/nice_nano_v2_ble_diag.overlay
