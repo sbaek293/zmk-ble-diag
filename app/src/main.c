@@ -48,7 +48,6 @@ static void display_status(void)
 static void setup_display(void)
 {
 	int err;
-	int attempt = 0;
 
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
@@ -57,7 +56,7 @@ static void setup_display(void)
 		return;
 	}
 
-	for (attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
+	for (int attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
 		err = cfb_framebuffer_init(display_dev);
 		if (!err) {
 			break;
@@ -70,7 +69,7 @@ static void setup_display(void)
 		return;
 	}
 
-	for (attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
+	for (int attempt = 1; attempt <= DISPLAY_INIT_RETRY_COUNT; attempt++) {
 		err = display_blanking_off(display_dev);
 		if (!err) {
 			break;
@@ -88,11 +87,15 @@ static void setup_display(void)
 	err = cfb_print(display_dev, "BLE DIAG BOOT", 0, 0);
 	if (err < 0) {
 		LOG_WRN("Failed to print boot line 0 (%d)", err);
+		display_dev = NULL;
+		return;
 	}
 
 	err = cfb_print(display_dev, "DISPLAY OK", 0, 1);
 	if (err < 0) {
 		LOG_WRN("Failed to print boot line 1 (%d)", err);
+		display_dev = NULL;
+		return;
 	}
 
 	cfb_framebuffer_finalize(display_dev);
