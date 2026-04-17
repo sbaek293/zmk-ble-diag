@@ -1,6 +1,6 @@
 /* XIAO nRF52840 BLE diag + SSD1306 */
 
-&i2c0 {
+&i2c1 {
 	status = "okay";
 	clock-frequency = <I2C_BITRATE_STANDARD>;
 
