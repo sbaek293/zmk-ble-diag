@@ -15,7 +15,7 @@ jobs:
     permissions:
       contents: read
     container:
-      image: ghcr.io/zephyrproject-rtos/ci:v0.26.5
+      image: zmkfirmware/zmk-build-arm:stable
     strategy:
       fail-fast: false
       matrix:
@@ -55,7 +55,8 @@ jobs:
             -s "${GITHUB_WORKSPACE}" \
             -b "${{ matrix.board }}" \
             -- \
-            -DDTC_OVERLAY_FILE="${GITHUB_WORKSPACE}/${{ matrix.overlay }}"
+            -DDTC_OVERLAY_FILE="${GITHUB_WORKSPACE}/${{ matrix.overlay }}" \
+            -DBOARD_ROOT="${GITHUB_WORKSPACE}/zmk/app;${GITHUB_WORKSPACE}/zmk/app/module"
 
       - name: Collect UF2 artifact
         shell: bash
