@@ -52,10 +52,10 @@ jobs:
           west build \
             -p always \
             -d "build/${{ matrix.build_dir }}" \
-            -s "${{ github.workspace }}" \
+            -s "${GITHUB_WORKSPACE}" \
             -b "${{ matrix.board }}" \
             -- \
-            -DDTC_OVERLAY_FILE="${{ github.workspace }}/${{ matrix.overlay }}"
+            -DDTC_OVERLAY_FILE="${GITHUB_WORKSPACE}/${{ matrix.overlay }}"
 
       - name: Collect UF2 artifact
         shell: bash
