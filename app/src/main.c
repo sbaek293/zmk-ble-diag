@@ -44,6 +44,8 @@ static void display_status(void)
 
 static void setup_display(void)
 {
+	int err;
+
 	display_dev = DEVICE_DT_GET(DT_CHOSEN(zephyr_display));
 	if (!device_is_ready(display_dev)) {
 		display_dev = NULL;
@@ -51,9 +53,17 @@ static void setup_display(void)
 		return;
 	}
 
-	if (cfb_framebuffer_init(display_dev)) {
+	err = cfb_framebuffer_init(display_dev);
+	if (err) {
 		display_dev = NULL;
-		LOG_WRN("CFB init failed");
+		LOG_WRN("CFB init failed (%d)", err);
+		return;
+	}
+
+	err = display_blanking_off(display_dev);
+	if (err) {
+		display_dev = NULL;
+		LOG_WRN("Display blanking off failed (%d)", err);
 		return;
 	}
 
