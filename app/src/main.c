@@ -36,14 +36,17 @@ static void display_print_line(const char *str, int row)
 	cfb_print(display_dev, (char *)str, 0, (uint16_t)(row * line_pitch));
 }
 
-static void display_error(const char *line1_msg)
+static void display_stopped(const char *line1_msg, const char *line2_msg)
 {
 	if (!display_dev) {
 		return;
 	}
 	cfb_framebuffer_clear(display_dev, true);
-	display_print_line("BLE ERR STOP", 0);
+	display_print_line("BLE DIAG STOP", 0);
 	display_print_line(line1_msg, 1);
+	if (line2_msg && line2_msg[0] != '\0') {
+		display_print_line(line2_msg, 2);
+	}
 	cfb_framebuffer_finalize(display_dev);
 }
 
@@ -224,11 +227,10 @@ int main(void)
 	err = bt_enable(NULL);
 	if (err) {
 		LOG_ERR("Bluetooth init failed (%d)", err);
-		if (display_dev) {
-			cfb_framebuffer_clear(display_dev, true);
-			cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
-			cfb_framebuffer_finalize(display_dev);
-		}
+		char errline[DISPLAY_LINE_BUFFER_SIZE];
+
+		snprintk(errline, sizeof(errline), "errno:%d", err);
+		display_stopped("BT INIT ERR", errline);
 		return err;
 	}
 	k_sleep(K_MSEC(BT_POST_ENABLE_DELAY_MS));
@@ -241,9 +243,11 @@ int main(void)
 			LOG_ERR("LE RX test start failed (ch=%u, err=%d)", channel, err);
 			stop_test_best_effort();
 			char errmsg[DISPLAY_LINE_BUFFER_SIZE];
+			char errline[DISPLAY_LINE_BUFFER_SIZE];
 
 			snprintk(errmsg, sizeof(errmsg), "RX ERR ch%u", channel);
-			display_error(errmsg);
+			snprintk(errline, sizeof(errline), "errno:%d", err);
+			display_stopped(errmsg, errline);
 			break;
 		}
 
@@ -254,9 +258,11 @@ int main(void)
 			LOG_ERR("LE test end failed (ch=%u, err=%d)", channel, err);
 			stop_test_best_effort();
 			char errmsg[DISPLAY_LINE_BUFFER_SIZE];
+			char errline[DISPLAY_LINE_BUFFER_SIZE];
 
 			snprintk(errmsg, sizeof(errmsg), "END ERR ch%u", channel);
-			display_error(errmsg);
+			snprintk(errline, sizeof(errline), "errno:%d", err);
+			display_stopped(errmsg, errline);
 			break;
 		}
 
