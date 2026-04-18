@@ -21,6 +21,7 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
  * this many characters within the display width (128 px). */
 #define DISPLAY_MAX_LINE_CHARS 14U
 #define DISPLAY_WIDTH_PX       128U
+#define DISPLAY_LINE_SPACING_PX 2U
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
@@ -28,10 +29,11 @@ static int current_channel_idx = 0;
 
 static const struct device *display_dev;
 static uint8_t font_height = 8; /* updated by setup_display() */
+static uint8_t line_pitch = 10; /* updated by setup_display() */
 
 static void display_print_line(const char *str, int row)
 {
-	cfb_print(display_dev, (char *)str, 0, (uint16_t)(row * font_height));
+	cfb_print(display_dev, (char *)str, 0, (uint16_t)(row * line_pitch));
 }
 
 static void display_error(const char *line1_msg)
@@ -97,30 +99,34 @@ static void setup_display(void)
 		return;
 	}
 
-	/* Select the largest font whose character width lets DISPLAY_MAX_LINE_CHARS
-	 * fit within 128 px. cfb_framebuffer_init() may default to a large font
-	 * (e.g. 16x26) that causes cfb_print to fail for strings over ~7 chars. */
+	/* Select the smallest font that still fits the target line length to reduce
+	 * overlap risk and improve readability on small OLED modules. */
 	{
 		int num_fonts = cfb_get_numof_fonts(display_dev);
 		uint8_t sel_font = 0;
-		uint8_t best_font_width = 0;
-		uint8_t best_font_height = 0;
+		uint8_t sel_font_width = 0;
+		uint8_t sel_font_height = 0;
+		bool found = false;
 
 		for (int i = 0; i < num_fonts; i++) {
 			uint8_t w = 0, h = 0;
 
+			/* Prefer smaller glyph height first, then smaller width for ties. */
 			if (cfb_get_font_size(display_dev, i, &w, &h) == 0 && w > 0 && h > 0 &&
 			    (uint32_t)w * DISPLAY_MAX_LINE_CHARS <= DISPLAY_WIDTH_PX &&
-			    w > best_font_width) {
-				best_font_width = w;
-				best_font_height = h;
+			    (!found || h < sel_font_height ||
+			     (h == sel_font_height && w < sel_font_width))) {
+				found = true;
 				sel_font = i;
+				sel_font_width = w;
+				sel_font_height = h;
 			}
 		}
 		cfb_framebuffer_set_font(display_dev, sel_font);
-		font_height = (best_font_height > 0) ? best_font_height : 8;
-		LOG_INF("CFB font selected: idx=%u width=%u height=%u", sel_font, best_font_width,
-			font_height);
+		font_height = (sel_font_height > 0) ? sel_font_height : 8;
+		line_pitch = font_height + DISPLAY_LINE_SPACING_PX;
+		LOG_INF("CFB font selected: idx=%u width=%u height=%u pitch=%u", sel_font,
+			sel_font_width, font_height, line_pitch);
 	}
 
 	retries_left = DISPLAY_INIT_RETRY_COUNT;
@@ -147,7 +153,7 @@ static void setup_display(void)
 		LOG_WRN("Failed to print boot line 0 (%d)", err);
 	}
 
-	err = cfb_print(display_dev, "DISPLAY OK", 0, font_height);
+	err = cfb_print(display_dev, "DISPLAY OK", 0, line_pitch);
 	if (err < 0) {
 		LOG_WRN("Failed to print boot line 1 (%d)", err);
 	}
