@@ -183,7 +183,7 @@ static int stop_test_and_read_count(uint32_t *count)
 	return 0;
 }
 
-static void attempt_stop_test(void)
+static void stop_test_best_effort(void)
 {
 	struct net_buf *buf;
 	struct net_buf *rsp = NULL;
@@ -192,17 +192,6 @@ static void attempt_stop_test(void)
 	if (buf && !bt_hci_cmd_send_sync(BT_HCI_OP_LE_TEST_END, buf, &rsp) && rsp) {
 		net_buf_unref(rsp);
 	}
-}
-
-static void display_stop_message(void)
-{
-	if (!display_dev) {
-		return;
-	}
-
-	cfb_framebuffer_clear(display_dev, true);
-	cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
-	cfb_framebuffer_finalize(display_dev);
 }
 
 int main(void)
@@ -215,7 +204,11 @@ int main(void)
 	err = bt_enable(NULL);
 	if (err) {
 		LOG_ERR("Bluetooth init failed (%d)", err);
-		display_stop_message();
+		if (display_dev) {
+			cfb_framebuffer_clear(display_dev, true);
+			cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
+			cfb_framebuffer_finalize(display_dev);
+		}
 		return err;
 	}
 	k_sleep(K_MSEC(BT_POST_ENABLE_DELAY_MS));
@@ -227,7 +220,7 @@ int main(void)
 		if (err) {
 			LOG_WRN("LE RX test start failed, will retry after backoff (ch=%u, err=%d)",
 				channel, err);
-			attempt_stop_test();
+			stop_test_best_effort();
 			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
 			continue;
 		}
@@ -239,7 +232,7 @@ int main(void)
 			LOG_WRN("LE test end failed, continuing (ch=%u, err=%d)",
 				channel, err);
 			packet_count[current_channel_idx] = PACKET_COUNT_ERROR;
-			attempt_stop_test();
+			stop_test_best_effort();
 			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
 		} else {
 			uint32_t uptime_sec = k_uptime_get_32() / 1000U;
