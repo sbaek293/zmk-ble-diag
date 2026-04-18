@@ -19,6 +19,7 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 /* Longest string we ever pass to cfb_print. The selected font must fit
  * this many characters within the display width (128 px). */
 #define DISPLAY_MAX_LINE_CHARS 14U
+#define DISPLAY_WIDTH_PX       128U
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
@@ -84,19 +85,20 @@ static void setup_display(void)
 	{
 		int num_fonts = cfb_get_numof_fonts(display_dev);
 		uint8_t sel_font = 0;
-		uint8_t best_w = 0;
+		uint8_t best_font_width = 0;
 
 		for (int i = 0; i < num_fonts; i++) {
 			uint8_t w = 0, h = 0;
 
 			if (cfb_get_font_size(display_dev, i, &w, &h) == 0 && w > 0 && h > 0 &&
-			    (uint32_t)w * DISPLAY_MAX_LINE_CHARS <= 128U && w > best_w) {
-				best_w = w;
+			    (uint32_t)w * DISPLAY_MAX_LINE_CHARS <= DISPLAY_WIDTH_PX &&
+			    w > best_font_width) {
+				best_font_width = w;
 				sel_font = i;
 			}
 		}
 		cfb_framebuffer_set_font(display_dev, sel_font);
-		LOG_INF("CFB font selected: idx=%u width=%u", sel_font, best_w);
+		LOG_INF("CFB font selected: idx=%u width=%u", sel_font, best_font_width);
 	}
 
 	retries_left = DISPLAY_INIT_RETRY_COUNT;
