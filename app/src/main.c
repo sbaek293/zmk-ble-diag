@@ -111,6 +111,7 @@ static void setup_display(void)
 		for (int i = 0; i < num_fonts; i++) {
 			uint8_t w = 0, h = 0;
 
+			/* Prefer smaller glyph height first, then smaller width for ties. */
 			if (cfb_get_font_size(display_dev, i, &w, &h) == 0 && w > 0 && h > 0 &&
 			    (uint32_t)w * DISPLAY_MAX_LINE_CHARS <= DISPLAY_WIDTH_PX &&
 			    (!found || h < sel_font_height ||
