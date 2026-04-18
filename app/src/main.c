@@ -183,7 +183,7 @@ static int stop_test_and_read_count(uint32_t *count)
 	return 0;
 }
 
-static void stop_test_if_running(void)
+static void attempt_stop_test(void)
 {
 	struct net_buf *buf;
 	struct net_buf *rsp = NULL;
@@ -225,9 +225,9 @@ int main(void)
 
 		err = run_rx_test(channel);
 		if (err) {
-			LOG_WRN("LE RX test start failed, retrying (ch=%u, err=%d)",
+			LOG_WRN("LE RX test start failed, will retry after backoff (ch=%u, err=%d)",
 				channel, err);
-			stop_test_if_running();
+			attempt_stop_test();
 			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
 			continue;
 		}
@@ -239,7 +239,7 @@ int main(void)
 			LOG_WRN("LE test end failed, continuing (ch=%u, err=%d)",
 				channel, err);
 			packet_count[current_channel_idx] = PACKET_COUNT_ERROR;
-			stop_test_if_running();
+			attempt_stop_test();
 			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
 		} else {
 			uint32_t uptime_sec = k_uptime_get_32() / 1000U;
