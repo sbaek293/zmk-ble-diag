@@ -35,7 +35,7 @@ static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
 static ch_status_t ch_status[CHANNEL_COUNT] = {0};
 static int ch_err_code[CHANNEL_COUNT] = {0};
-static int current_channel_idx = 0;
+static int current_channel_idx = 0; /* used only for boot display_status call */
 static uint32_t round_count = 0;
 
 static const struct device *display_dev;
@@ -61,7 +61,7 @@ static void display_stopped(const char *line1_msg, const char *line2_msg)
 	cfb_framebuffer_finalize(display_dev);
 }
 
-static void display_status(void)
+static void display_status(int idx)
 {
 	if (!display_dev) {
 		return;
@@ -73,8 +73,8 @@ static void display_status(void)
 
 	snprintk(line0, sizeof(line0), "BLE DIAG R:%u", round_count + 1);
 	snprintk(line1, sizeof(line1), "CH:%u %d/5",
-		 diag_channels[current_channel_idx], current_channel_idx + 1);
-	snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
+		 diag_channels[idx], idx + 1);
+	snprintk(line2, sizeof(line2), "PKT:%u", packet_count[idx]);
 
 	cfb_framebuffer_clear(display_dev, true);
 	display_print_line(line0, 0);
@@ -89,6 +89,7 @@ static void display_summary(uint32_t err_count)
 		return;
 	}
 
+	/* status_str indices match ch_status_t: 0=CH_PENDING("??"), 1=CH_OK, 2=CH_RX_ERR, 3=CH_END_ERR */
 	static const char *const status_str[] = {"??", "OK", "RX", "EN"};
 	char line0[DISPLAY_LINE_BUFFER_SIZE];
 	char line1[DISPLAY_LINE_BUFFER_SIZE];
@@ -205,7 +206,7 @@ static void setup_display(void)
 
 	cfb_framebuffer_finalize(display_dev);
 	k_sleep(K_MSEC(DISPLAY_BOOT_SPLASH_MS));
-	display_status();
+	display_status(0);
 }
 
 static int run_rx_test(uint8_t channel)
@@ -287,17 +288,16 @@ int main(void)
 		}
 
 		/* Scan all channels; errors are recorded but do not stop the round */
-		for (current_channel_idx = 0; current_channel_idx < CHANNEL_COUNT;
-		     current_channel_idx++) {
-			uint8_t channel = diag_channels[current_channel_idx];
+		for (int i = 0; i < CHANNEL_COUNT; i++) {
+			uint8_t channel = diag_channels[i];
 
-			display_status();
+			display_status(i);
 
 			err = run_rx_test(channel);
 			if (err) {
 				LOG_ERR("LE RX test start failed (ch=%u, err=%d)", channel, err);
-				ch_status[current_channel_idx] = CH_RX_ERR;
-				ch_err_code[current_channel_idx] = err;
+				ch_status[i] = CH_RX_ERR;
+				ch_err_code[i] = err;
 				stop_test_best_effort();
 				err_count++;
 				continue;
@@ -305,21 +305,21 @@ int main(void)
 
 			k_sleep(K_MSEC(CHANNEL_DWELL_MS));
 
-			err = stop_test_and_read_count(&packet_count[current_channel_idx]);
+			err = stop_test_and_read_count(&packet_count[i]);
 			if (err) {
 				LOG_ERR("LE test end failed (ch=%u, err=%d)", channel, err);
-				ch_status[current_channel_idx] = CH_END_ERR;
-				ch_err_code[current_channel_idx] = err;
+				ch_status[i] = CH_END_ERR;
+				ch_err_code[i] = err;
 				stop_test_best_effort();
 				err_count++;
 				continue;
 			}
 
-			ch_status[current_channel_idx] = CH_OK;
+			ch_status[i] = CH_OK;
 			uint32_t uptime_sec = k_uptime_get_32() / 1000U;
 
 			LOG_INF("t=%us CH=%u idx=%d pkt=%u", uptime_sec, channel,
-				current_channel_idx + 1, packet_count[current_channel_idx]);
+				i + 1, packet_count[i]);
 		}
 
 		round_count++;
