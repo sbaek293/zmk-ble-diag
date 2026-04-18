@@ -6,6 +6,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
+#include <stdint.h>
 
 LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 
@@ -17,6 +18,7 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 #define DISPLAY_BOOT_SPLASH_MS 300
 #define BT_POST_ENABLE_DELAY_MS 200
 #define TEST_ERROR_BACKOFF_MS 200
+#define PACKET_COUNT_ERROR UINT32_MAX
 
 /* Longest string we ever pass to cfb_print. The selected font must fit
  * this many characters within the display width (128 px). */
@@ -43,7 +45,11 @@ static void display_status(void)
 	snprintk(line0, sizeof(line0), "BLE DIAG RUN");
 	snprintk(line1, sizeof(line1), "CH:%u IDX:%d", diag_channels[current_channel_idx],
 		 one_based_channel_idx);
-	snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
+	if (packet_count[current_channel_idx] == PACKET_COUNT_ERROR) {
+		snprintk(line2, sizeof(line2), "PKT:ERR");
+	} else {
+		snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
+	}
 
 	cfb_framebuffer_clear(display_dev, true);
 	cfb_print(display_dev, line0, 0, 0);
@@ -191,7 +197,17 @@ static void stop_test_if_running(void)
 static void cleanup_diagnostics(void)
 {
 	stop_test_if_running();
+	if (!display_dev) {
+		return;
+	}
 
+	cfb_framebuffer_clear(display_dev, true);
+	cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
+	cfb_framebuffer_finalize(display_dev);
+}
+
+static void display_stop_message(void)
+{
 	if (!display_dev) {
 		return;
 	}
@@ -211,7 +227,7 @@ int main(void)
 	err = bt_enable(NULL);
 	if (err) {
 		LOG_ERR("Bluetooth init failed (%d)", err);
-		cleanup_diagnostics();
+		display_stop_message();
 		return err;
 	}
 	k_sleep(K_MSEC(BT_POST_ENABLE_DELAY_MS));
@@ -234,7 +250,7 @@ int main(void)
 		if (err) {
 			LOG_WRN("LE test end failed, continuing (ch=%u, err=%d)",
 				channel, err);
-			packet_count[current_channel_idx] = 0U;
+			packet_count[current_channel_idx] = PACKET_COUNT_ERROR;
 			stop_test_if_running();
 			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
 		} else {
