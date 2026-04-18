@@ -15,6 +15,8 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 #define DISPLAY_INIT_RETRY_COUNT 20
 #define DISPLAY_INIT_RETRY_DELAY_MS 50
 #define DISPLAY_BOOT_SPLASH_MS 300
+#define BT_POST_ENABLE_DELAY_MS 200
+#define TEST_ERROR_BACKOFF_MS 200
 
 /* Longest string we ever pass to cfb_print. The selected font must fit
  * this many characters within the display width (128 px). */
@@ -23,6 +25,7 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
+static bool packet_count_failed[CHANNEL_COUNT];
 static int current_channel_idx = 0;
 
 static const struct device *display_dev;
@@ -41,7 +44,11 @@ static void display_status(void)
 	snprintk(line0, sizeof(line0), "BLE DIAG RUN");
 	snprintk(line1, sizeof(line1), "CH:%u IDX:%d", diag_channels[current_channel_idx],
 		 one_based_channel_idx);
-	snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
+	if (packet_count_failed[current_channel_idx]) {
+		snprintk(line2, sizeof(line2), "PKT:ERR");
+	} else {
+		snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
+	}
 
 	cfb_framebuffer_clear(display_dev, true);
 	cfb_print(display_dev, line0, 0, 0);
@@ -175,7 +182,7 @@ static int stop_test_and_read_count(uint32_t *count)
 	return 0;
 }
 
-static void cleanup_diagnostics(void)
+static void stop_test_best_effort(void)
 {
 	struct net_buf *buf;
 	struct net_buf *rsp = NULL;
@@ -184,14 +191,6 @@ static void cleanup_diagnostics(void)
 	if (buf && !bt_hci_cmd_send_sync(BT_HCI_OP_LE_TEST_END, buf, &rsp) && rsp) {
 		net_buf_unref(rsp);
 	}
-
-	if (!display_dev) {
-		return;
-	}
-
-	cfb_framebuffer_clear(display_dev, true);
-	cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
-	cfb_framebuffer_finalize(display_dev);
 }
 
 int main(void)
@@ -204,33 +203,42 @@ int main(void)
 	err = bt_enable(NULL);
 	if (err) {
 		LOG_ERR("Bluetooth init failed (%d)", err);
+		if (display_dev) {
+			cfb_framebuffer_clear(display_dev, true);
+			cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
+			cfb_framebuffer_finalize(display_dev);
+		}
 		return err;
 	}
+	k_sleep(K_MSEC(BT_POST_ENABLE_DELAY_MS));
 
 	while (1) {
 		uint8_t channel = diag_channels[current_channel_idx];
 
 		err = run_rx_test(channel);
 		if (err) {
-			LOG_ERR("LE RX test start failed, terminating diagnostics (ch=%u, err=%d)",
+			LOG_WRN("LE RX test start failed, will retry after backoff (ch=%u, err=%d)",
 				channel, err);
-			cleanup_diagnostics();
-			return err;
+			stop_test_best_effort();
+			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
+			continue;
 		}
 
 		k_sleep(K_MSEC(CHANNEL_DWELL_MS));
 
 		err = stop_test_and_read_count(&packet_count[current_channel_idx]);
 		if (err) {
-			LOG_ERR("LE test end failed, terminating diagnostics (ch=%u, err=%d)",
+			LOG_WRN("LE test end failed, continuing (ch=%u, err=%d)",
 				channel, err);
-			cleanup_diagnostics();
-			return err;
+			packet_count_failed[current_channel_idx] = true;
+			stop_test_best_effort();
+			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
+		} else {
+			packet_count_failed[current_channel_idx] = false;
+			uint32_t uptime_sec = k_uptime_get_32() / 1000U;
+			LOG_INF("t=%us CH=%u idx=%d pkt=%u", uptime_sec, channel,
+				current_channel_idx + 1, packet_count[current_channel_idx]);
 		}
-
-		uint32_t uptime_sec = k_uptime_get_32() / 1000U;
-		LOG_INF("t=%us CH=%u idx=%d pkt=%u", uptime_sec, channel,
-			current_channel_idx + 1, packet_count[current_channel_idx]);
 		display_status();
 
 		current_channel_idx = (current_channel_idx + 1) % CHANNEL_COUNT;
