@@ -6,7 +6,7 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
-#include <stdint.h>
+#include <stdbool.h>
 
 LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 
@@ -18,7 +18,6 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 #define DISPLAY_BOOT_SPLASH_MS 300
 #define BT_POST_ENABLE_DELAY_MS 200
 #define TEST_ERROR_BACKOFF_MS 200
-#define PACKET_COUNT_ERROR UINT32_MAX
 
 /* Longest string we ever pass to cfb_print. The selected font must fit
  * this many characters within the display width (128 px). */
@@ -27,6 +26,7 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
+static bool packet_count_failed[CHANNEL_COUNT] = {false};
 static int current_channel_idx = 0;
 
 static const struct device *display_dev;
@@ -45,7 +45,7 @@ static void display_status(void)
 	snprintk(line0, sizeof(line0), "BLE DIAG RUN");
 	snprintk(line1, sizeof(line1), "CH:%u IDX:%d", diag_channels[current_channel_idx],
 		 one_based_channel_idx);
-	if (packet_count[current_channel_idx] == PACKET_COUNT_ERROR) {
+	if (packet_count_failed[current_channel_idx]) {
 		snprintk(line2, sizeof(line2), "PKT:ERR");
 	} else {
 		snprintk(line2, sizeof(line2), "PKT:%u", packet_count[current_channel_idx]);
@@ -231,10 +231,11 @@ int main(void)
 		if (err) {
 			LOG_WRN("LE test end failed, continuing (ch=%u, err=%d)",
 				channel, err);
-			packet_count[current_channel_idx] = PACKET_COUNT_ERROR;
+			packet_count_failed[current_channel_idx] = true;
 			stop_test_best_effort();
 			k_sleep(K_MSEC(TEST_ERROR_BACKOFF_MS));
 		} else {
+			packet_count_failed[current_channel_idx] = false;
 			uint32_t uptime_sec = k_uptime_get_32() / 1000U;
 			LOG_INF("t=%us CH=%u idx=%d pkt=%u", uptime_sec, channel,
 				current_channel_idx + 1, packet_count[current_channel_idx]);
