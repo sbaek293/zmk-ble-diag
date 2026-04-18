@@ -16,8 +16,9 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 #define DISPLAY_INIT_RETRY_COUNT 20
 #define DISPLAY_INIT_RETRY_DELAY_MS 50
 #define DISPLAY_BOOT_SPLASH_MS 300
-#define BT_POST_ENABLE_DELAY_MS 200
-#define TEST_ERROR_BACKOFF_MS 200
+#define DIAG_RETRY_BACKOFF_MS 200
+#define BT_POST_ENABLE_DELAY_MS DIAG_RETRY_BACKOFF_MS
+#define TEST_ERROR_BACKOFF_MS DIAG_RETRY_BACKOFF_MS
 #define PACKET_COUNT_ERROR UINT32_MAX
 
 /* Longest string we ever pass to cfb_print. The selected font must fit
@@ -192,18 +193,6 @@ static void stop_test_if_running(void)
 	if (buf && !bt_hci_cmd_send_sync(BT_HCI_OP_LE_TEST_END, buf, &rsp) && rsp) {
 		net_buf_unref(rsp);
 	}
-}
-
-static void cleanup_diagnostics(void)
-{
-	stop_test_if_running();
-	if (!display_dev) {
-		return;
-	}
-
-	cfb_framebuffer_clear(display_dev, true);
-	cfb_print(display_dev, "BLE DIAG STOP", 0, 0);
-	cfb_framebuffer_finalize(display_dev);
 }
 
 static void display_stop_message(void)
