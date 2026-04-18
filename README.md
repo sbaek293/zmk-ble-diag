@@ -28,10 +28,26 @@ nice!nano v2 / XIAO nRF52840용 BLE 진단 펌웨어 스켈레톤입니다.
 
 ![SSD1306 상태 예시](docs/ssd1306-status-screenshot.png)
 
-## 빌드 예시 (Zephyr)
+## 빌드 예시 (west workspace)
+
 ```bash
-west build -b nice_nano/nrf52840 . -DDTC_OVERLAY_FILE=boards/shields/nice_nano_v2_ble_diag.overlay
-west build -b xiao_ble . -DDTC_OVERLAY_FILE=boards/shields/xiao_nrf52840_ble_diag.overlay
+# 1. 워크스페이스 디렉터리를 만들고 이 저장소를 config/ 에 클론
+mkdir zmk-workspace && cd zmk-workspace
+git clone https://github.com/sbaek293/zmk-ble-diag config
+
+# 2. west 워크스페이스 초기화 (zmk-workspace/ 에서 실행)
+west init -l config
+west update
+west zephyr-export
+
+# 3. 보드별 빌드 (zmk-workspace/ 에서 실행)
+west build -b nice_nano/nrf52840 config \
+  -- -DDTC_OVERLAY_FILE="$(pwd)/config/boards/shields/nice_nano_v2_ble_diag.overlay" \
+     -DBOARD_ROOT="$(pwd)/zmk/app/module"
+
+west build -b xiao_ble config \
+  -- -DDTC_OVERLAY_FILE="$(pwd)/config/boards/shields/xiao_nrf52840_ble_diag.overlay" \
+     -DBOARD_ROOT="$(pwd)/zmk/app/module"
 ```
 
 ## GitHub Actions 빌드

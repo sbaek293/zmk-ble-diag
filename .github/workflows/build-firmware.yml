@@ -32,30 +32,26 @@ jobs:
     steps:
       - name: Checkout firmware source
         uses: actions/checkout@v4
-
-      - name: Checkout ZMK
-        uses: actions/checkout@v4
         with:
-          repository: zmkfirmware/zmk
-          path: zmk
+          path: config
 
       - name: Initialize west workspace
-        working-directory: zmk
+        run: west init -l config
+
+      - name: Fetch ZMK and dependencies
         run: |
-          west init -l app
           west update
           west zephyr-export
 
       - name: Build firmware (${{ matrix.board }})
-        working-directory: zmk
         run: |
           west build \
             -p always \
             -d "build/${{ matrix.build_dir }}" \
-            -s "${GITHUB_WORKSPACE}" \
             -b "${{ matrix.board }}" \
+            config \
             -- \
-            -DDTC_OVERLAY_FILE="${GITHUB_WORKSPACE}/${{ matrix.overlay }}" \
+            -DDTC_OVERLAY_FILE="${GITHUB_WORKSPACE}/config/${{ matrix.overlay }}" \
             -DBOARD_ROOT="${GITHUB_WORKSPACE}/zmk/app/module"
 
       - name: Collect UF2 artifact
@@ -64,7 +60,7 @@ jobs:
           set -euo pipefail
           BOARD_NAME="${{ matrix.board }}"
           UF2_FILES_RAW="$(
-            find "zmk/build/${{ matrix.build_dir }}/zephyr" \
+            find "build/${{ matrix.build_dir }}/zephyr" \
               -maxdepth 1 \
               -type f \
               -name '*.uf2' \
@@ -74,7 +70,7 @@ jobs:
           if [[ -z "${UF2_FILES_RAW}" ]]; then
             printf 'UF2 output not found for board: %s\n' "${BOARD_NAME}"
             BUILD_DIR_NAME="${{ matrix.build_dir }}"
-            printf 'Expected path: zmk/build/%s/zephyr/*.uf2\n' \
+            printf 'Expected path: build/%s/zephyr/*.uf2\n' \
               "${BUILD_DIR_NAME}"
             printf 'Check build logs for generation errors.\n'
             exit 1
