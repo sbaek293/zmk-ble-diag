@@ -6,7 +6,6 @@
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/byteorder.h>
 #include <zephyr/sys/printk.h>
-#include <stdbool.h>
 
 LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 
@@ -26,7 +25,7 @@ LOG_MODULE_REGISTER(ble_diag, LOG_LEVEL_INF);
 
 static const uint8_t diag_channels[CHANNEL_COUNT] = {0, 10, 20, 30, 39};
 static uint32_t packet_count[CHANNEL_COUNT] = {0};
-static bool packet_count_failed[CHANNEL_COUNT] = {false};
+static bool packet_count_failed[CHANNEL_COUNT];
 static int current_channel_idx = 0;
 
 static const struct device *display_dev;
